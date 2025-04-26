@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import trimesh
 
@@ -21,19 +21,16 @@ NAME_LIST_PATH = RESOURCES_DIR / "name_list.txt"
 FONT_PATH = RESOURCES_DIR / "fonts/Roboto/static/Roboto-Regular.ttf"
 
 # Parameters from project description
-TEXT_TARGET_HEIGHT = 15.0  # mm
+TEXT_TARGET_HEIGHT = 10.0  # mm
 TEXT_TARGET_DEPTH = 2.5  # mm
 
 # Placeholder for translation adjustments per base length (can be loaded from config later)
 # Format: {base_length: (x_offset, y_offset, z_offset)}
-X_ADJUST_BASE = 7.0
-Y_ADJUST = -24.4
+X_ADJUST_BASE = 7.1
 TRANSLATION_ADJUSTMENTS: Dict[int, Tuple[float, float, float]] = {
-    40: (X_ADJUST_BASE - 40.0, Y_ADJUST, 0.0),
-    60: (X_ADJUST_BASE - 60.0, Y_ADJUST, 0.0),
-    70: (X_ADJUST_BASE - 70.0, Y_ADJUST, 0.0),
-    80: (X_ADJUST_BASE - 80.0, Y_ADJUST, 0.0),
-    90: (X_ADJUST_BASE - 90.0, Y_ADJUST, 0.0),
+    40: (X_ADJUST_BASE - 40.0, 17.7, 0.0),
+    60: (X_ADJUST_BASE - 60.0, 1.8, 0.0),
+    80: (X_ADJUST_BASE - 80.0, -14.1, 0.0),
     # Add more if needed
 }
 
@@ -79,16 +76,22 @@ def main():
     if not base_clips:
         print(f"Error: No valid base clips found in {CLIP_BASES_DIR}")
         return
+    # Get the length of the longest base clip available
+    longest_base_length = max(base_clips.keys()) if base_clips else 0
     print(
-        f"Loaded {len(base_clips)} base clips with lengths: {list(base_clips.keys())}"
+        f"Loaded {len(base_clips)} base clips. Longest length: {longest_base_length} mm"
     )
 
     print("Loading names...")
-    names = load_names(NAME_LIST_PATH)
-    if not names:
+    all_names = load_names(NAME_LIST_PATH)
+    if not all_names:
         print(f"Error: No names found in {NAME_LIST_PATH}")
         return
-    print(f"Loaded {len(names)} names.")
+    # Process only unique names
+    unique_names = sorted(list(set(all_names)))
+    print(
+        f"Loaded {len(all_names)} total names. Processing {len(unique_names)} unique names."
+    )
 
     print(f"Ensuring output directory exists: {OUTPUT_DIR}")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -96,8 +99,12 @@ def main():
     # --- Processing ---
     processed_count = 0
     skipped_count = 0
-    for name in names:
-        print(f"\nProcessing name: {name}")
+    oversized_names_report: List[
+        Tuple[str, float]
+    ] = []  # Store names that used fallback
+
+    for name in unique_names:  # Iterate through unique names
+        print(f"\nProcessing unique name: {name}")
 
         normalized_name = normalize_text(name)
         if not normalized_name:
@@ -125,9 +132,11 @@ def main():
         text_width = text_mesh.bounds[1, 0] - text_mesh.bounds[0, 0]
         print(f"Generated text mesh width: {text_width:.2f} mm")
 
-        # Find suitable base clip
+        # Find suitable base clip or use longest as fallback
         selected_base_length = None
         selected_base_mesh = None
+        used_fallback = False
+
         for length, base_mesh in base_clips.items():
             if length >= text_width:
                 selected_base_length = length
@@ -135,15 +144,27 @@ def main():
                 print(f"Selected base clip length: {selected_base_length} mm")
                 break
 
+        # If no suitable base found and clips exist, use the longest one
+        if selected_base_mesh is None and base_clips:
+            selected_base_length = longest_base_length
+            selected_base_mesh = base_clips[longest_base_length]
+            used_fallback = True
+            oversized_names_report.append((normalized_name, text_width))
+            print(
+                f"Warning: Text width ({text_width:.2f} mm) exceeds longest base ({longest_base_length} mm). "
+                f"Using longest base as fallback."
+            )
+
+        # If still no base (e.g., base_clips was empty initially), skip
         if selected_base_mesh is None:
             print(
-                f"Warning: No suitable base clip found for name '{normalized_name}' (width: {text_width:.2f} mm). Skipping."
+                f"Error: No base clips available to process name '{normalized_name}'. Skipping."
             )
             skipped_count += 1
             continue
 
         # Determine translation (adjust based on selected base if needed)
-        # For now, using the default (0,0,0) or a specific one if defined
+        # Use the selected length (which might be the fallback longest length)
         text_translation = TRANSLATION_ADJUSTMENTS.get(
             selected_base_length, (0.0, 0.0, 0.0)
         )
@@ -180,9 +201,23 @@ def main():
 
     # --- Summary ---
     print("\n--- Generation Summary ---")
-    print(f"Total names processed: {len(names)}")
+    print(f"Total unique names processed: {len(unique_names)}")
     print(f"Successfully generated: {processed_count}")
     print(f"Skipped/Failed: {skipped_count}")
+
+    # Report names that used fallback base
+    if oversized_names_report:
+        print("\n--- Oversized Names Report ---")
+        print(
+            "The following names were wider than the longest available base clip and used it as fallback:"
+        )
+        for name, width in oversized_names_report:
+            print(
+                f"- {name} (Width: {width:.2f} mm, Used Base: {longest_base_length} mm)"
+            )
+    else:
+        print("\nAll names fit within available base clip lengths.")
+
     print("--------------------------")
 
 
