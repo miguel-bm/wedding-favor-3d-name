@@ -350,13 +350,16 @@ def create_text_mesh(
     log.info(f"Mesh Y-dim after Y-flip: {mesh.bounds[1, 1] - mesh.bounds[0, 1]:.4f} mm")
 
     # --- Apply final rotation as requested ---
-    # Rotate 180 degrees around the X-axis passing through the mesh center
-    center = mesh.centroid
+    # Rotate 180 degrees around the X-axis passing through the baseline origin
+    # center = mesh.centroid # <-- Use fixed origin instead
+    point_on_axis = [0, 0, 0]
     angle = np.pi  # 180 degrees in radians
     direction = [1, 0, 0]  # X-axis
-    rot_matrix = trimesh.transformations.rotation_matrix(angle, direction, center)
+    rot_matrix = trimesh.transformations.rotation_matrix(
+        angle, direction, point_on_axis
+    )
     mesh.apply_transform(rot_matrix)
-    log.info("Applied 180-degree rotation around X-axis.")
+    log.info("Applied 180-degree rotation around X-axis through origin.")
     log.info(f"Mesh bounds after X-rotation: {mesh.bounds}")
     log.info(
         f"Mesh Y-dim after X-rotation: {mesh.bounds[1, 1] - mesh.bounds[0, 1]:.4f} mm"

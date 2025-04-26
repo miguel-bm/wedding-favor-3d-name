@@ -1,4 +1,4 @@
-Alejandro - Alejandro Lanaspa
+Alex - Alejandro Lanaspa
 Isabel - Isabel novia Alex
 Ada - Ada García Martínez
 Ainara - Ainara Santamaría Lópes
@@ -44,6 +44,8 @@ Silvano - Marido de Gema
 Guzmán - Guzmán Martín García
 Nacho - Ignacio Blanco
 Laura - Mujer de Nacho
+Patricia - Hija de Nacho y Laura
+Alex - Hijo de Nacho y Laura
 Inma - Inma Arauzo Barbadillo
 Irene - Irene Pardo González
 Javi - Javi Arauzo Barbadillo

@@ -27,10 +27,11 @@ TEXT_TARGET_DEPTH = 2.5  # mm
 # Placeholder for translation adjustments per base length (can be loaded from config later)
 # Format: {base_length: (x_offset, y_offset, z_offset)}
 X_ADJUST_BASE = 7.1
+Y_ADJUST_BASE = -9.5
 TRANSLATION_ADJUSTMENTS: Dict[int, Tuple[float, float, float]] = {
-    40: (X_ADJUST_BASE - 40.0, 17.7, 0.0),
-    60: (X_ADJUST_BASE - 60.0, 1.8, 0.0),
-    80: (X_ADJUST_BASE - 80.0, -14.1, 0.0),
+    40: (X_ADJUST_BASE - 40.0, Y_ADJUST_BASE + 17.7, 2.5),
+    60: (X_ADJUST_BASE - 60.0, Y_ADJUST_BASE + 1.8, 2.5),
+    80: (X_ADJUST_BASE - 80.0, Y_ADJUST_BASE - 14.1, 2.5),
     # Add more if needed
 }
 
